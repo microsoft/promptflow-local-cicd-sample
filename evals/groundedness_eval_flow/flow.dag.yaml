@@ -1,0 +1,54 @@
+id: groundedness_eval
+name: Groundedness Evaluation
+environment:
+  python_requirements_txt: ../requirements.txt
+inputs:
+  text:
+    type: string
+    default: The Great Barrier Reef is the world's largest coral reef system,
+      composed of over 2,900 individual reefs and 900 islands stretching over
+      2,300 kilometers. It is located in the Coral Sea, off the coast of
+      Queensland, Australia. The reef is renowned for its vibrant marine life
+      and is one of the most popular tourist destinations in Australia. It is
+      also a significant scientific and environmental asset, hosting a diversity
+      of species. Unfortunately, the Great Barrier Reef faces threats from
+      climate change, coral bleaching, fishing, and tourism activities, which
+      have caused significant damage to this unique ecosystem.
+  summary:
+    type: string
+    default: The Great Barrier Reef, located off Queensland, Australia, is the
+      world's largest coral reef system. It faces environmental threats like
+      climate change and coral bleaching, impacting its diverse marine life.
+outputs:
+  gpt_groundedness:
+    type: object
+    reference: ${concat_scores.output.gpt_groundedness}
+nodes:
+- name: groundedness_score
+  type: llm
+  source:
+    type: code
+    path: groundedness_score.jinja2
+  inputs:
+    text: ${inputs.text}
+    summary: ${inputs.summary}
+    max_tokens: 256
+    temperature: 0
+    deployment_name: gpt-4
+  connection: azure_openai_connection
+  api: chat
+- name: concat_scores
+  type: python
+  source:
+    type: code
+    path: concat_scores.py
+  inputs:
+    groundesness_score: ${groundedness_score.output}
+- name: aggregate_variants_results
+  type: python
+  source:
+    type: code
+    path: aggregate_variants_results.py
+  inputs:
+    results: ${concat_scores.output}
+  aggregation: true

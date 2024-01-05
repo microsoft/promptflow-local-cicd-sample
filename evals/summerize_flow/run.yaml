@@ -1,0 +1,4 @@
+flow: . 
+data: data.jsonl
+column_mapping:
+  text: ${data.text}

@@ -1,0 +1,6 @@
+display_name: eval-flow-summary
+flow: .
+run: summerize_flow
+column_mapping: 
+  summary: ${run.outputs.summary}
+  text: ${run.outputs.text}

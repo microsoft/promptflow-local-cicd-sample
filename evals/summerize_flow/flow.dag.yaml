@@ -1,0 +1,23 @@
+id: summerize_flow
+name: Summerization Flow
+environment:
+  python_requirements_txt: ../requirements.txt
+inputs:
+  text:
+    type: string
+    default: Once upon a time in a colorful forest, there lived a small, adventurous squirrel named Sammy. Sammy had bright, curious eyes and a fluffy tail that swished excitedly whenever he discovered something new. Unlike other squirrels who were busy collecting nuts, Sammy loved exploring the forest and making friends with other animals.
+outputs:
+  summary:
+    type: string
+    reference: ${summerize.output}
+  text:
+    type: string
+    reference: ${inputs.text}
+nodes:
+- name: summerize
+  type: python
+  source:
+    type: code
+    path: summerize.py
+  inputs:
+    text: ${inputs.text}

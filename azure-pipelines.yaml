@@ -1,0 +1,56 @@
+trigger:
+- main
+
+pr:
+- main
+
+variables:
+- group: promptflow-evals
+- name: PYTHON_VERSION
+  value: '3.10.12'
+
+stages:
+- stage: promptflow
+  displayName: 'promptflow'
+  jobs:
+  - job: PromptflowEvals
+    displayName: 'run promptflow evals'
+    pool:
+      vmImage: 'ubuntu-latest'
+    steps:
+    - checkout: self
+    - task: UsePythonVersion@0
+      inputs:
+        versionSpec: $(PYTHON_VERSION)
+      displayName: 'Python Setup'
+    - script: |
+        pip install -r evals/requirements.txt
+        pip install keyrings.alt
+      displayName: 'Install Dependencies'
+    - script: |
+        echo '$schema: https://azuremlschemas.azureedge.net/promptflow/latest/AzureOpenAIConnection.schema.json' > azure_openai_connection.yaml
+        echo 'name: azure_openai_connection' >> azure_openai_connection.yaml
+        echo 'type: azure_open_ai' >> azure_openai_connection.yaml
+        echo "api_key: \"$(AZURE_OPENAI_API_KEY)\"" >> azure_openai_connection.yaml
+        echo "api_base: \"$(AZURE_OPENAI_ENDPOINT)\"" >> azure_openai_connection.yaml
+        echo 'api_type: azure' >> azure_openai_connection.yaml
+        echo "api_version: \"2023-05-15\"" >> azure_openai_connection.yaml
+      displayName: 'Create Azure OpenAI Connection File'
+      env:
+        AZURE_OPENAI_API_KEY: $(AZURE_OPENAI_API_KEY)
+    - script: pf connection create --file azure_openai_connection.yaml
+    - script: |
+        pf run create --file evals/summerize_flow/run.yaml --stream --name summerize_flow
+        pf run create --file evals/groundedness_eval_flow/run.yaml --run summerize_flow --stream --name groundedness_eval_flow
+      displayName: 'Run PromptFlow Commands'
+      env:
+        AZURE_OPENAI_API_KEY: $(AZURE_OPENAI_API_KEY)
+    - script: |
+        pf run visualize --name groundedness_eval_flow
+        mv /tmp/*.html $(Build.ArtifactStagingDirectory)/
+      displayName: 'Generate Visualizations'
+    - task: PublishBuildArtifacts@1
+      inputs:
+        PathtoPublish: '$(Build.ArtifactStagingDirectory)'
+        ArtifactName: 'report'
+        publishLocation: 'Container'
